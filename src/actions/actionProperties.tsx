@@ -696,6 +696,21 @@ export const actionChangeFontFamily = register({
         icon: FreedrawIcon,
       },
       {
+        value: FONT_FAMILY.ZiYuQingMei,
+        text: "字语青梅硬笔",
+        icon: FreedrawIcon,
+      },
+      {
+        value: FONT_FAMILY.XiaolaiSC,
+        text: "小赖字体",
+        icon: FreedrawIcon,
+      },
+      {
+        value: FONT_FAMILY.MuYaoRuanBi,
+        text: "沐瑶软笔",
+        icon: FreedrawIcon,
+      },
+      {
         value: FONT_FAMILY.Helvetica,
         text: t("labels.normal"),
         icon: FontFamilyNormalIcon,
@@ -704,7 +719,7 @@ export const actionChangeFontFamily = register({
         value: FONT_FAMILY.Cascadia,
         text: t("labels.code"),
         icon: FontFamilyCodeIcon,
-      },
+      }
     ];
 
     return (
