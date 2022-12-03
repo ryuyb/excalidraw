@@ -105,6 +105,9 @@ export const FONT_FAMILY = {
   Virgil: 1,
   Helvetica: 2,
   Cascadia: 3,
+  XiaolaiSC: 4,
+  ZiYuQingMei: 5,
+  MuYaoRuanBi: 6,
 };
 
 export const THEME = {
