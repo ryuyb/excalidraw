@@ -1,17 +1,7 @@
-import { GithubIcon, DiscordIcon, PlusPromoIcon, TwitterIcon } from "./icons";
+import { GithubIcon, DiscordIcon, TwitterIcon } from "./icons";
 
 export const MenuLinks = () => (
   <>
-    <a
-      href="https://plus.excalidraw.com/plus?utm_source=excalidraw&utm_medium=app&utm_content=hamburger"
-      target="_blank"
-      rel="noreferrer"
-      className="menu-item"
-      style={{ color: "var(--color-promo)" }}
-    >
-      <div className="menu-item__icon">{PlusPromoIcon}</div>
-      <div className="menu-item__text">Excalidraw+</div>
-    </a>
     <a
       className="menu-item"
       href="https://github.com/excalidraw/excalidraw"

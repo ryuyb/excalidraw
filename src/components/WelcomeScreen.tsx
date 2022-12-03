@@ -6,13 +6,7 @@ import { COOKIES } from "../constants";
 import { collabDialogShownAtom } from "../excalidraw-app/collab/Collab";
 import { t } from "../i18n";
 import { AppState } from "../types";
-import {
-  ExcalLogo,
-  HelpIcon,
-  LoadIcon,
-  PlusPromoIcon,
-  UsersIcon,
-} from "./icons";
+import { ExcalLogo, HelpIcon, LoadIcon, UsersIcon } from "./icons";
 import "./WelcomeScreen.scss";
 
 const isExcalidrawPlusSignedUser = document.cookie.includes(
@@ -125,14 +119,6 @@ const WelcomeScreen = ({
           shortcut="?"
           icon={HelpIcon}
         />
-        {!isExcalidrawPlusSignedUser && (
-          <WelcomeScreenItem
-            link="https://plus.excalidraw.com/plus?utm_source=excalidraw&utm_medium=app&utm_content=welcomeScreenGuest"
-            label="Try Excalidraw Plus!"
-            shortcut={null}
-            icon={PlusPromoIcon}
-          />
-        )}
       </div>
     </div>
   );
