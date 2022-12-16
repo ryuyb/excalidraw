@@ -13,7 +13,7 @@ import {
   withBatchedUpdates,
   withBatchedUpdatesThrottled,
 } from "../../../utils";
-import { EVENT } from "../../../constants";
+import { EVENT, ROUNDNESS } from "../../../constants";
 import { distance2d } from "../../../math";
 import { fileOpen } from "../../../data/filesystem";
 import { loadSceneOrLibraryFromBlob } from "../../utils";
@@ -192,7 +192,10 @@ export default function App() {
         >
           {COMMENT_SVG}
         </button>
-        <button onClick={() => alert("This is dummy footer")}>
+        <button
+          className="custom-footer"
+          onClick={() => alert("This is dummy footer")}
+        >
           {" "}
           custom footer{" "}
         </button>
@@ -241,7 +244,10 @@ export default function App() {
             locked: false,
             link: null,
             updated: 1,
-            strokeSharpness: "round",
+            roundness: {
+              type: ROUNDNESS.ADAPTIVE_RADIUS,
+              value: 32,
+            },
           },
         ],
         null,

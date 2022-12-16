@@ -70,6 +70,7 @@ import {
   MQ_RIGHT_SIDEBAR_MIN_WIDTH,
   MQ_SM_MAX_WIDTH,
   POINTER_BUTTON,
+  ROUNDNESS,
   SCROLL_TIMEOUT,
   TAP_TWICE_TIMEOUT,
   TEXT_TO_CENTER_SNAP_THRESHOLD,
@@ -126,6 +127,7 @@ import { mutateElement, newElementWith } from "../element/mutateElement";
 import { deepCopyElement, newFreeDrawElement } from "../element/newElement";
 import {
   hasBoundTextElement,
+  isArrowElement,
   isBindingElement,
   isBindingElementType,
   isBoundToContainer,
@@ -133,6 +135,7 @@ import {
   isInitializedImageElement,
   isLinearElement,
   isLinearElementType,
+  isUsingAdaptiveRadius,
 } from "../element/typeChecks";
 import {
   ExcalidrawBindableElement,
@@ -254,6 +257,7 @@ import {
   getApproxMinLineHeight,
   getApproxMinLineWidth,
   getBoundTextElement,
+  getContainerCenter,
   getContainerDims,
   getTextBindableContainerAtPosition,
   isValidTextContainer,
@@ -281,18 +285,21 @@ const deviceContextInitialValue = {
   canDeviceFitSidebar: false,
 };
 const DeviceContext = React.createContext<Device>(deviceContextInitialValue);
+DeviceContext.displayName = "DeviceContext";
 export const useDevice = () => useContext<Device>(DeviceContext);
 
 const ExcalidrawContainerContext = React.createContext<{
   container: HTMLDivElement | null;
   id: string | null;
 }>({ container: null, id: null });
+ExcalidrawContainerContext.displayName = "ExcalidrawContainerContext";
 export const useExcalidrawContainer = () =>
   useContext(ExcalidrawContainerContext);
 
 const ExcalidrawElementsContext = React.createContext<
   readonly NonDeletedExcalidrawElement[]
 >([]);
+ExcalidrawElementsContext.displayName = "ExcalidrawElementsContext";
 
 const ExcalidrawAppStateContext = React.createContext<AppState>({
   ...getDefaultAppState(),
@@ -301,17 +308,19 @@ const ExcalidrawAppStateContext = React.createContext<AppState>({
   offsetLeft: 0,
   offsetTop: 0,
 });
+ExcalidrawAppStateContext.displayName = "ExcalidrawAppStateContext";
 
-const ExcalidrawSetAppStateContent = React.createContext<
+const ExcalidrawSetAppStateContext = React.createContext<
   React.Component<any, AppState>["setState"]
 >(() => {});
+ExcalidrawSetAppStateContext.displayName = "ExcalidrawSetAppStateContext";
 
 export const useExcalidrawElements = () =>
   useContext(ExcalidrawElementsContext);
 export const useExcalidrawAppState = () =>
   useContext(ExcalidrawAppStateContext);
 export const useExcalidrawSetAppState = () =>
-  useContext(ExcalidrawSetAppStateContent);
+  useContext(ExcalidrawSetAppStateContext);
 
 let didTapTwice: boolean = false;
 let tappedTwiceTimer = 0;
@@ -549,7 +558,7 @@ class App extends React.Component<AppProps, AppState> {
           value={this.excalidrawContainerValue}
         >
           <DeviceContext.Provider value={this.device}>
-            <ExcalidrawSetAppStateContent.Provider value={this.setAppState}>
+            <ExcalidrawSetAppStateContext.Provider value={this.setAppState}>
               <ExcalidrawAppStateContext.Provider value={this.state}>
                 <ExcalidrawElementsContext.Provider
                   value={this.scene.getNonDeletedElements()}
@@ -615,7 +624,7 @@ class App extends React.Component<AppProps, AppState> {
                   <main>{this.renderCanvas()}</main>
                 </ExcalidrawElementsContext.Provider>{" "}
               </ExcalidrawAppStateContext.Provider>
-            </ExcalidrawSetAppStateContent.Provider>
+            </ExcalidrawSetAppStateContext.Provider>
           </DeviceContext.Provider>
         </ExcalidrawContainerContext.Provider>
       </div>
@@ -1656,9 +1665,9 @@ class App extends React.Component<AppProps, AppState> {
       fillStyle: this.state.currentItemFillStyle,
       strokeWidth: this.state.currentItemStrokeWidth,
       strokeStyle: this.state.currentItemStrokeStyle,
+      roundness: null,
       roughness: this.state.currentItemRoughness,
       opacity: this.state.currentItemOpacity,
-      strokeSharpness: this.state.currentItemStrokeSharpness,
       text,
       fontSize: this.state.currentItemFontSize,
       fontFamily: this.state.currentItemFontFamily,
@@ -2049,23 +2058,23 @@ class App extends React.Component<AppProps, AppState> {
           this.scene.getNonDeletedElements(),
           this.state,
         );
-
         if (selectedElements.length === 1) {
           const selectedElement = selectedElements[0];
-
-          if (isLinearElement(selectedElement)) {
-            if (
-              !this.state.editingLinearElement ||
-              this.state.editingLinearElement.elementId !==
-                selectedElements[0].id
-            ) {
-              this.history.resumeRecording();
-              this.setState({
-                editingLinearElement: new LinearElementEditor(
-                  selectedElement,
-                  this.scene,
-                ),
-              });
+          if (event[KEYS.CTRL_OR_CMD]) {
+            if (isLinearElement(selectedElement)) {
+              if (
+                !this.state.editingLinearElement ||
+                this.state.editingLinearElement.elementId !==
+                  selectedElements[0].id
+              ) {
+                this.history.resumeRecording();
+                this.setState({
+                  editingLinearElement: new LinearElementEditor(
+                    selectedElement,
+                    this.scene,
+                  ),
+                });
+              }
             }
           } else if (
             isTextElement(selectedElement) ||
@@ -2075,9 +2084,12 @@ class App extends React.Component<AppProps, AppState> {
             if (!isTextElement(selectedElement)) {
               container = selectedElement as ExcalidrawTextContainer;
             }
+            const midPoint = getContainerCenter(selectedElement, this.state);
+            const sceneX = midPoint.x;
+            const sceneY = midPoint.y;
             this.startTextEditing({
-              sceneX: selectedElement.x + selectedElement.width / 2,
-              sceneY: selectedElement.y + selectedElement.height / 2,
+              sceneX,
+              sceneY,
               container,
             });
             event.preventDefault();
@@ -2521,7 +2533,12 @@ class App extends React.Component<AppProps, AppState> {
       existingTextElement = this.getTextElementAtPosition(sceneX, sceneY);
     }
 
-    if (!existingTextElement && shouldBindToContainer && container) {
+    if (
+      !existingTextElement &&
+      shouldBindToContainer &&
+      container &&
+      !isArrowElement(container)
+    ) {
       const fontString = {
         fontSize: this.state.currentItemFontSize,
         fontFamily: this.state.currentItemFontFamily,
@@ -2559,7 +2576,7 @@ class App extends React.Component<AppProps, AppState> {
           strokeStyle: this.state.currentItemStrokeStyle,
           roughness: this.state.currentItemRoughness,
           opacity: this.state.currentItemOpacity,
-          strokeSharpness: this.state.currentItemStrokeSharpness,
+          roundness: null,
           text: "",
           fontSize: this.state.currentItemFontSize,
           fontFamily: this.state.currentItemFontFamily,
@@ -2574,6 +2591,14 @@ class App extends React.Component<AppProps, AppState> {
           locked: false,
         });
 
+    if (!existingTextElement && shouldBindToContainer && container) {
+      mutateElement(container, {
+        boundElements: (container.boundElements || []).concat({
+          type: "text",
+          id: element.id,
+        }),
+      });
+    }
     this.setState({ editingElement: element });
 
     if (!existingTextElement) {
@@ -2625,8 +2650,9 @@ class App extends React.Component<AppProps, AppState> {
 
     if (selectedElements.length === 1 && isLinearElement(selectedElements[0])) {
       if (
-        !this.state.editingLinearElement ||
-        this.state.editingLinearElement.elementId !== selectedElements[0].id
+        event[KEYS.CTRL_OR_CMD] &&
+        (!this.state.editingLinearElement ||
+          this.state.editingLinearElement.elementId !== selectedElements[0].id)
       ) {
         this.history.resumeRecording();
         this.setState({
@@ -2635,8 +2661,13 @@ class App extends React.Component<AppProps, AppState> {
             this.scene,
           ),
         });
+        return;
+      } else if (
+        this.state.editingLinearElement &&
+        this.state.editingLinearElement.elementId === selectedElements[0].id
+      ) {
+        return;
       }
-      return;
     }
 
     resetCursor(this.canvas);
@@ -2680,9 +2711,11 @@ class App extends React.Component<AppProps, AppState> {
         sceneY,
       );
       if (container) {
-        if (hasBoundTextElement(container)) {
-          sceneX = container.x + container.width / 2;
-          sceneY = container.y + container.height / 2;
+        if (isArrowElement(container) || hasBoundTextElement(container)) {
+          const midPoint = getContainerCenter(container, this.state);
+
+          sceneX = midPoint.x;
+          sceneY = midPoint.y;
         }
       }
       this.startTextEditing({
@@ -2783,6 +2816,7 @@ class App extends React.Component<AppProps, AppState> {
     event: React.PointerEvent<HTMLCanvasElement>,
   ) => {
     this.savePointer(event.clientX, event.clientY, this.state.cursorButton);
+
     if (gesture.pointers.has(event.pointerId)) {
       gesture.pointers.set(event.pointerId, {
         x: event.clientX,
@@ -3091,15 +3125,18 @@ class App extends React.Component<AppProps, AppState> {
         );
       } else if (
         // if using cmd/ctrl, we're not dragging
-        !event[KEYS.CTRL_OR_CMD] &&
-        (hitElement ||
-          this.isHittingCommonBoundingBoxOfSelectedElements(
-            scenePointer,
-            selectedElements,
-          )) &&
-        !hitElement?.locked
+        !event[KEYS.CTRL_OR_CMD]
       ) {
-        setCursor(this.canvas, CURSOR_TYPE.MOVE);
+        if (
+          (hitElement ||
+            this.isHittingCommonBoundingBoxOfSelectedElements(
+              scenePointer,
+              selectedElements,
+            )) &&
+          !hitElement?.locked
+        ) {
+          setCursor(this.canvas, CURSOR_TYPE.MOVE);
+        }
       } else {
         setCursor(this.canvas, CURSOR_TYPE.AUTO);
       }
@@ -3209,6 +3246,8 @@ class App extends React.Component<AppProps, AppState> {
       linearElementEditor.elementId,
     );
 
+    const boundTextElement = getBoundTextElement(element);
+
     if (!element) {
       return;
     }
@@ -3247,6 +3286,11 @@ class App extends React.Component<AppProps, AppState> {
           scenePointerX,
           scenePointerY,
         )
+      ) {
+        setCursor(this.canvas, CURSOR_TYPE.MOVE);
+      } else if (
+        boundTextElement &&
+        hitTest(boundTextElement, this.state, scenePointerX, scenePointerY)
       ) {
         setCursor(this.canvas, CURSOR_TYPE.MOVE);
       }
@@ -4035,7 +4079,7 @@ class App extends React.Component<AppProps, AppState> {
       strokeStyle: this.state.currentItemStrokeStyle,
       roughness: this.state.currentItemRoughness,
       opacity: this.state.currentItemOpacity,
-      strokeSharpness: this.state.currentItemLinearStrokeSharpness,
+      roundness: null,
       simulatePressure: event.pressure === 0.5,
       locked: false,
     });
@@ -4091,8 +4135,8 @@ class App extends React.Component<AppProps, AppState> {
       strokeWidth: this.state.currentItemStrokeWidth,
       strokeStyle: this.state.currentItemStrokeStyle,
       roughness: this.state.currentItemRoughness,
+      roundness: null,
       opacity: this.state.currentItemOpacity,
-      strokeSharpness: this.state.currentItemLinearStrokeSharpness,
       locked: false,
     });
 
@@ -4178,7 +4222,10 @@ class App extends React.Component<AppProps, AppState> {
         strokeStyle: this.state.currentItemStrokeStyle,
         roughness: this.state.currentItemRoughness,
         opacity: this.state.currentItemOpacity,
-        strokeSharpness: this.state.currentItemLinearStrokeSharpness,
+        roundness:
+          this.state.currentItemRoundness === "round"
+            ? { type: ROUNDNESS.PROPORTIONAL_RADIUS }
+            : null,
         startArrowhead,
         endArrowhead,
         locked: false,
@@ -4229,7 +4276,14 @@ class App extends React.Component<AppProps, AppState> {
       strokeStyle: this.state.currentItemStrokeStyle,
       roughness: this.state.currentItemRoughness,
       opacity: this.state.currentItemOpacity,
-      strokeSharpness: this.state.currentItemStrokeSharpness,
+      roundness:
+        this.state.currentItemRoundness === "round"
+          ? {
+              type: isUsingAdaptiveRadius(elementType)
+                ? ROUNDNESS.ADAPTIVE_RADIUS
+                : ROUNDNESS.PROPORTIONAL_RADIUS,
+            }
+          : null,
       locked: false,
     });
 
@@ -6305,8 +6359,14 @@ class App extends React.Component<AppProps, AppState> {
     container?: ExcalidrawTextContainer | null,
   ) {
     if (container) {
-      const elementCenterX = container.x + container.width / 2;
-      const elementCenterY = container.y + container.height / 2;
+      let elementCenterX = container.x + container.width / 2;
+      let elementCenterY = container.y + container.height / 2;
+
+      const elementCenter = getContainerCenter(container, appState);
+      if (elementCenter) {
+        elementCenterX = elementCenter.x;
+        elementCenterY = elementCenter.y;
+      }
       const distanceToCenter = Math.hypot(
         x - elementCenterX,
         y - elementCenterY,
