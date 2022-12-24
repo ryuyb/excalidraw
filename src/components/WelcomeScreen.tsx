@@ -2,16 +2,12 @@ import { useAtom } from "jotai";
 import { actionLoadScene, actionShortcuts } from "../actions";
 import { ActionManager } from "../actions/manager";
 import { getShortcutFromShortcutName } from "../actions/shortcuts";
-import { COOKIES } from "../constants";
+import { isExcalidrawPlusSignedUser } from "../constants";
 import { collabDialogShownAtom } from "../excalidraw-app/collab/Collab";
 import { t } from "../i18n";
 import { AppState } from "../types";
 import { ExcalLogo, HelpIcon, LoadIcon, UsersIcon } from "./icons";
 import "./WelcomeScreen.scss";
-
-const isExcalidrawPlusSignedUser = document.cookie.includes(
-  COOKIES.AUTH_STATE_COOKIE,
-);
 
 const WelcomeScreenItem = ({
   label,
