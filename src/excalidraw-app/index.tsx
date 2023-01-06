@@ -85,7 +85,6 @@ import { parseLibraryTokensFromUrl, useHandleLibrary } from "../data/library";
 import { EncryptedIcon } from "./components/EncryptedIcon";
 import { ExcalidrawPlusAppLink } from "./components/ExcalidrawPlusAppLink";
 import { LanguageList } from "./components/LanguageList";
-import { PlusPromoIcon } from "../components/icons";
 
 polyfill();
 
@@ -616,13 +615,6 @@ const ExcalidrawWrapper = () => {
         <MainMenu.DefaultItems.Help />
         <MainMenu.DefaultItems.ClearCanvas />
         <MainMenu.Separator />
-        <MainMenu.ItemLink
-          icon={PlusPromoIcon}
-          href="https://plus.excalidraw.com/plus?utm_source=excalidraw&utm_medium=app&utm_content=hamburger"
-          className="ExcalidrawPlus"
-        >
-          Excalidraw+
-        </MainMenu.ItemLink>
         <MainMenu.DefaultItems.Socials />
         <MainMenu.Separator />
         <MainMenu.DefaultItems.ToggleTheme />
