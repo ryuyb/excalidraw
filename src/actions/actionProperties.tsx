@@ -719,7 +719,7 @@ export const actionChangeFontFamily = register({
         value: FONT_FAMILY.Cascadia,
         text: t("labels.code"),
         icon: FontFamilyCodeIcon,
-      }
+      },
     ];
 
     return (
