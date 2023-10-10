@@ -1,4 +1,4 @@
-import { isTransparent, isWritableElement } from "../../utils";
+import { isInteractive, isTransparent, isWritableElement } from "../../utils";
 import { ExcalidrawElement } from "../../element/types";
 import { AppState } from "../../types";
 import { TopPicks } from "./TopPicks";
@@ -91,6 +91,7 @@ const ColorPickerPopupContent = ({
         onChange={(color) => {
           onChange(color);
         }}
+        colorPickerType={type}
       />
     </div>
   );
@@ -121,11 +122,14 @@ const ColorPickerPopupContent = ({
           }
         }}
         onCloseAutoFocus={(e) => {
-          e.preventDefault();
           e.stopPropagation();
+          // prevents focusing the trigger
+          e.preventDefault();
 
-          // return focus to excalidraw container
-          if (container) {
+          // return focus to excalidraw container unless
+          // user focuses an interactive element, such as a button, or
+          // enters the text editor by clicking on canvas with the text tool
+          if (container && !isInteractive(document.activeElement)) {
             container.focus();
           }
 
@@ -137,7 +141,7 @@ const ColorPickerPopupContent = ({
         alignOffset={-16}
         sideOffset={20}
         style={{
-          zIndex: 9999,
+          zIndex: "var(--zIndex-layerUI)",
           backgroundColor: "var(--popup-bg-color)",
           maxWidth: "208px",
           maxHeight: window.innerHeight,
@@ -162,6 +166,7 @@ const ColorPickerPopupContent = ({
                   state = state || {
                     keepOpenOnAlt: true,
                     onSelect: onChange,
+                    colorPickerType: type,
                   };
                   state.keepOpenOnAlt = true;
                   return state;
@@ -172,6 +177,7 @@ const ColorPickerPopupContent = ({
                   : {
                       keepOpenOnAlt: false,
                       onSelect: onChange,
+                      colorPickerType: type,
                     };
               });
             }}

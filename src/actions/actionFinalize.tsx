@@ -19,7 +19,12 @@ import { AppState } from "../types";
 export const actionFinalize = register({
   name: "finalize",
   trackEvent: false,
-  perform: (elements, appState, _, { canvas, focusContainer, scene }) => {
+  perform: (
+    elements,
+    appState,
+    _,
+    { interactiveCanvas, focusContainer, scene },
+  ) => {
     if (appState.editingLinearElement) {
       const { elementId, startBindingElement, endBindingElement } =
         appState.editingLinearElement;
@@ -85,7 +90,9 @@ export const actionFinalize = register({
         }
       }
       if (isInvisiblySmallElement(multiPointElement)) {
-        newElements = newElements.slice(0, -1);
+        newElements = newElements.filter(
+          (el) => el.id !== multiPointElement.id,
+        );
       }
 
       // If the multi point line closes the loop,
@@ -125,13 +132,6 @@ export const actionFinalize = register({
           { x, y },
         );
       }
-
-      if (
-        !appState.activeTool.locked &&
-        appState.activeTool.type !== "freedraw"
-      ) {
-        appState.selectedElementIds[multiPointElement.id] = true;
-      }
     }
 
     if (
@@ -139,7 +139,7 @@ export const actionFinalize = register({
         appState.activeTool.type !== "freedraw") ||
       !multiPointElement
     ) {
-      resetCursor(canvas);
+      resetCursor(interactiveCanvas);
     }
 
     let activeTool: AppState["activeTool"];
@@ -167,6 +167,7 @@ export const actionFinalize = register({
           multiPointElement
             ? appState.activeTool
             : activeTool,
+        activeEmbeddable: null,
         draggingElement: null,
         multiElement: null,
         editingElement: null,
